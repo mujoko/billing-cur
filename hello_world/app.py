@@ -6,8 +6,7 @@ import boto3
 import logging
 import pandas as pd
 from csv import reader
-import os
-# import time
+import time
 
 
 
@@ -19,7 +18,6 @@ s3 = boto3.client('s3',region_name = 'ap-southeast-1')
 
 def lambda_handler(event, context):
 
-    
     bucketTarget = "billing-ula"
 
     logger.info('===========Started=============')
@@ -36,45 +34,23 @@ def lambda_handler(event, context):
         z = zipfile.ZipFile(BytesIO(obj['Body'].read()))
         # Extract and upload each file in the zipfile
         for filename in z.namelist():
-            tempFilePath = '/mnt/'
-            existing_columns = []
-            z.extract(filename, tempFilePath)
-            
             content_type = guess_type(filename, strict=False)[0]
-
-            # csv_stream = pd.read_csv(tempFilePath + '/' + filename, sep=",", low_memory=False)
-            # # print(csv_stream.columns)
-            # duplicate_counter = 1
-            # for i in csv_stream.columns:
-            #     if (i in existing_columns):
-            #         print('duplicate')
-            #         existing_columns.append(i.lower().replace(' ', '_') + '_dup' + str(duplicate_counter))
-            #         duplicate_counter = duplicate_counter + 1
-            #         continue
-            #     existing_columns.append(i.lower().replace(' ', '_'))
-
-            # csv_stream.columns = existing_columns
-
-            # for i in existing_columns:
-            #     if (i.startswith('user')):
-            #         csv_stream[i] = csv_stream[i].astype('str')
-            
-
-            # fileobj=z.open(filename)
-            with open(tempFilePath , 'rb') as data:
-                s3.upload_fileobj(
-                    Fileobj=data,
-                    Bucket= bucketTarget,
-                    Key=filename,
-                    ExtraArgs={'ContentType': content_type}
-                )
-            os.remove('/mnt/csv/' + filename)
+            fileobj=z.open(filename)
+            # timestr = time.strftime("%Y%m%d-%H%M%S")
+            s3.upload_fileobj(
+                Fileobj=fileobj,
+                Bucket= bucketTarget,
+                Key=filename,
+                ExtraArgs={'ContentType': content_type}
+            ) 
+        
             response = s3.get_object(Bucket=bucketTarget, Key=filename)
+            data = response['Body'].read().decode('utf-8')
 
-            # data = response['Body'].read().decode('utf-8')
             # df = pd.read_csv(data, 
             #  # Read CSV file from response object
             # df=pd.DataFrame( list(reader(data)),
+
             #                  dtype={"user_Department": "string",
             #                         "user_Environment": "string",
             #                         "user_Owner": "string",
